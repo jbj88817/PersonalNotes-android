@@ -44,23 +44,48 @@ public class NavigationDrawerFragment extends Fragment {
         View containerView = getActivity().findViewById(fragmentId);
         mDrawerLayout = drawerLayout;
         mDrawerToggle = new ActionBarDrawerToggle(getActivity(), drawerLayout,
-                toolbar, R.string.drawer_open, R.string.drawer_close){
+                toolbar, R.string.drawer_open, R.string.drawer_close) {
 
             @Override
             public void onDrawerSlide(View drawerView, float slideOffset) {
-                super.onDrawerSlide(drawerView, slideOffset);
+                if (slideOffset < 0.6) {
+                    toolbar.setAlpha(1 - slideOffset / 2);
+                }
             }
 
             @Override
             public void onDrawerOpened(View drawerView) {
                 super.onDrawerOpened(drawerView);
+                if (!mUserLearnedDrawer) {
+                    mUserLearnedDrawer = true;
+                    AppSharedPreferences.setUserLearned(getActivity(),
+                            AppConstant.KEY_USER_LEARNED_DRAWER, AppConstant.TRUE);
+                }
+
             }
 
             @Override
             public void onDrawerClosed(View drawerView) {
                 super.onDrawerClosed(drawerView);
+                AppSharedPreferences.setUserLearned(getActivity(),
+                        AppConstant.KEY_USER_LEARNED_DRAWER, AppConstant.TRUE);
             }
 
         };
+
+        if (!mUserLearnedDrawer && !mFromSavedInstanceState) {
+            mDrawerLayout.openDrawer(containerView);
+        }
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
+        mDrawerLayout.post(new Runnable() {
+            @Override
+            public void run() {
+                mDrawerToggle.syncState();
+            }
+        });
+    }
+
+    public void closeDrawer() {
+        mDrawerLayout.closeDrawers();
     }
 }
