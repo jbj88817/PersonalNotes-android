@@ -15,7 +15,7 @@ public class AppDatabase extends SQLiteOpenHelper {
     interface Tables {
         String NOTES = "notes";
         String ARCHIVES ="archives";
-        String DELETED = "deleted";
+        String TRASH = "trash";
     }
 
     public AppDatabase(Context context) {
@@ -45,7 +45,7 @@ public class AppDatabase extends SQLiteOpenHelper {
                 + ArchivesContract.ArchivesColumns.ARCHIVES_TYPE + " TEXT NOT NULL,"
                 + ArchivesContract.ArchivesColumns.ARCHIVES_DATE_TIME+ " TEXT NOT NULL)");
 
-        db.execSQL("CREATE TABLE " + Tables.DELETED + " ("
+        db.execSQL("CREATE TABLE " + Tables.TRASH + " ("
                 + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + TrashContract.DeletedColumns.DELETED_TITLE + " TEXT NOT NULL,"
                 + TrashContract.DeletedColumns.DELETED_DESCRIPTION + " TEXT NOT NULL,"
@@ -62,7 +62,7 @@ public class AppDatabase extends SQLiteOpenHelper {
         if(version != DATABASE_VERSION) {
             db.execSQL("DROP TABLE IF EXISTS " + Tables.NOTES);
             db.execSQL("DROP TABLE IF EXISTS " + Tables.ARCHIVES);
-            db.execSQL("DROP TABLE IF EXISTS " + Tables.DELETED);
+            db.execSQL("DROP TABLE IF EXISTS " + Tables.TRASH);
             onCreate(db);
         }
     }
@@ -72,6 +72,6 @@ public class AppDatabase extends SQLiteOpenHelper {
     }
 
     public void emptyTrash(){
-        getWritableDatabase().delete(Tables.DELETED, null,null);
+        getWritableDatabase().delete(Tables.TRASH, null,null);
     }
 }

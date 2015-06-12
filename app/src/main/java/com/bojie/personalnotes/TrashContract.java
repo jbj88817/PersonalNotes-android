@@ -21,7 +21,7 @@ public class TrashContract {
     public static final Uri URI_TABLE = BASE_CONTENT_URI.buildUpon().appendEncodedPath(PATH_DELETED).build();
 
 
-    public static class Deleted implements DeletedColumns, BaseColumns {
+    public static class Trash implements DeletedColumns, BaseColumns {
 
         public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd." + CONTENT_AUTHORITY + ".deleted";
         public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd." + CONTENT_AUTHORITY + ".deleted";
@@ -30,7 +30,7 @@ public class TrashContract {
             return URI_TABLE.buildUpon().appendEncodedPath(deletedId).build();
         }
 
-        public static String getDeletedId(Uri uri) {
+        public static String getTrashId(Uri uri) {
             return uri.getPathSegments().get(1);
         }
     }
