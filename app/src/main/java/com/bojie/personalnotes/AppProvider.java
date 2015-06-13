@@ -1,12 +1,14 @@
 package com.bojie.personalnotes;
 
 import android.content.ContentProvider;
+import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.provider.BaseColumns;
+import android.text.TextUtils;
 
 /**
  * Created by bojiejiang on 6/11/15.
@@ -114,4 +116,97 @@ public class AppProvider extends ContentProvider {
         return queryBuilder.query(db, projection, selection, selectionArgs, null, null, sortOrder);
 
     }
+
+    public Uri insert(Uri uri, ContentValues values) {
+        final SQLiteDatabase db = mDatabase.getWritableDatabase();
+        final int match = sUriMatcher.match(uri);
+
+        switch (match) {
+            case NOTES:
+                long noteRecordId = db.insertOrThrow(AppDatabase.Tables.NOTES, null, values);
+                return NotesContract.Notes.buildNoteUri(String.valueOf(noteRecordId));
+            case ARCHIVES:
+                long archiveRecordId = db.insertOrThrow(AppDatabase.Tables.ARCHIVES, null, values);
+                return ArchivesContract.Archives.buildArchiveUri(String.valueOf(archiveRecordId));
+            case TRASH:
+                long trashRecordId = db.insertOrThrow(AppDatabase.Tables.TRASH, null, values);
+                return TrashContract.Trash.buildTrashUri(String.valueOf(trashRecordId));
+
+            default:
+                throw new IllegalArgumentException("Unknown Uri" + uri);
+        }
+    }
+
+    @Override
+    public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+        final SQLiteDatabase db = mDatabase.getWritableDatabase();
+        final int match = sUriMatcher.match(uri);
+
+        String selectionCriteria = selection;
+        switch (match) {
+            case NOTES:
+                return db.update(AppDatabase.Tables.NOTES, values, selection, selectionArgs);
+            case NOTES_ID:
+                String noteId = NotesContract.Notes.getNoteId(uri);
+                selectionCriteria = BaseColumns._ID + "=" + noteId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.update(AppDatabase.Tables.NOTES, values, selectionCriteria, selectionArgs);
+            case ARCHIVES:
+                return db.update(AppDatabase.Tables.ARCHIVES, values, selection, selectionArgs);
+
+            case ARCHIVES_ID:
+                String archiveId = ArchivesContract.Archives.getArchiveId(uri);
+                selectionCriteria = BaseColumns._ID + "=" + archiveId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.update(AppDatabase.Tables.ARCHIVES, values, selectionCriteria, selectionArgs);
+
+            case TRASH:
+                return db.update(AppDatabase.Tables.TRASH, values, selection, selectionArgs);
+            case TRASH_ID:
+                String trashId = TrashContract.Trash.getTrashId(uri);
+                selectionCriteria = BaseColumns._ID + "=" + trashId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.update(AppDatabase.Tables.TRASH, values, selectionCriteria, selectionArgs);
+
+            default:
+                throw new IllegalArgumentException("Unknown Uri" + uri);
+        }
+    }
+
+    @Override
+    public int delete(Uri uri, String selection, String[] selectionArgs) {
+
+        if (uri.equals(NotesContract.BASE_CONTENT_URI)) {
+            deleteDatabase();
+            return 0;
+        }
+
+        final SQLiteDatabase db = mDatabase.getWritableDatabase();
+        final int match = sUriMatcher.match(uri);
+
+        switch (match) {
+            case NOTES_ID:
+                String noteId = NotesContract.Notes.getNoteId(uri);
+                String notesSelectionCriteria = BaseColumns._ID + "=" + noteId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.delete(AppDatabase.Tables.NOTES, notesSelectionCriteria, selectionArgs);
+
+            case ARCHIVES_ID:
+                String archiveId = ArchivesContract.Archives.getArchiveId(uri);
+                String archiveSelectionCriteria = BaseColumns._ID + "=" + archiveId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.delete(AppDatabase.Tables.NOTES, archiveSelectionCriteria, selectionArgs);
+
+            case TRASH_ID:
+                String trashId = TrashContract.Trash.getTrashId(uri);
+                String trashSelectionCriteria = BaseColumns._ID + "=" + trashId
+                        + (!TextUtils.isEmpty(selection) ? "AND ( " + selection + ")" : "");
+                return db.delete(AppDatabase.Tables.NOTES, trashSelectionCriteria, selectionArgs);
+
+            default:
+                throw new IllegalArgumentException("Unknown Uri" + uri);
+        }
+    }
+
+
 }

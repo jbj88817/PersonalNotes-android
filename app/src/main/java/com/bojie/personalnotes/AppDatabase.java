@@ -47,9 +47,9 @@ public class AppDatabase extends SQLiteOpenHelper {
 
         db.execSQL("CREATE TABLE " + Tables.TRASH + " ("
                 + BaseColumns._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + TrashContract.DeletedColumns.DELETED_TITLE + " TEXT NOT NULL,"
-                + TrashContract.DeletedColumns.DELETED_DESCRIPTION + " TEXT NOT NULL,"
-                + TrashContract.DeletedColumns.DELETED_DATE_TIME+ " TEXT NOT NULL)");
+                + TrashContract.TrashColumns.TRASH_TITLE + " TEXT NOT NULL,"
+                + TrashContract.TrashColumns.TRASH_DESCRIPTION + " TEXT NOT NULL,"
+                + TrashContract.TrashColumns.TRASH_DATE_TIME+ " TEXT NOT NULL)");
     }
 
     @Override
