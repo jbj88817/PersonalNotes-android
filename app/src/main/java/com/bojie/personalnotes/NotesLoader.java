@@ -97,6 +97,63 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
         return entries;
     }
 
+    @Override
+    public void deliverResult(List<Note> notes) {
+        if (isReset()) {
+            if (notes != null) {
+                releaseResources();
+                return;
+            }
+        }
+        List<Note> oldNotes = mNotes;
+        mNotes = notes;
+        if (isStarted()) {
+            super.deliverResult(notes);
+        }
+        if (oldNotes != null && oldNotes != notes) {
+            releaseResources();
+        }
+    }
+
+    protected void onStartLoading() {
+        if (mNotes != null) {
+            deliverResult(mNotes);
+        }
+        if (takeContentChanged()) {
+            forceLoad();
+        } else if (mNotes == null) {
+            forceLoad();
+        }
+    }
+
+    @Override
+    protected void onStopLoading() {
+        cancelLoad();
+    }
+
+    @Override
+    protected void onReset() {
+        onStopLoading();
+        if (mNotes != null) {
+            releaseResources();
+            mNotes = null;
+        }
+    }
+
+    @Override
+    public void onCanceled(List<Note> notes) {
+        super.onCanceled(notes);
+        releaseResources();
+    }
+
+    @Override
+    public void forceLoad() {
+        super.forceLoad();
+    }
+
+    private void releaseResources() {
+        mCursor.close();
+    }
 }
 
 
