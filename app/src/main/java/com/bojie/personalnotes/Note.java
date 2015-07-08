@@ -70,6 +70,10 @@ public class Note {
         this.mBitmap = BitmapFactory.decodeFile(path);
     }
 
+    public void setBitmap(Bitmap bitmap) {
+        this.mBitmap = bitmap;
+    }
+
     public Bitmap getBitmap() {
         return mBitmap;
     }

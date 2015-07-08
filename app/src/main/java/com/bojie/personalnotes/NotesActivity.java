@@ -2,8 +2,10 @@ package com.bojie.personalnotes;
 
 import android.content.ContentResolver;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.PopupMenu;
@@ -11,7 +13,6 @@ import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 
 import com.dropbox.client2.DropboxAPI;
@@ -81,9 +82,9 @@ public class NotesActivity extends BaseActivity implements
                     public boolean onMenuItemClick(MenuItem item) {
                         if (item.getItemId() == R.id.action_delete) {
                             moveToTrash();
-                            delete(v,pos);
-                        } else if(item.getItemId() == R.id.action_archive) {
-                            moveToArchive(v,pos);
+                            delete(v, pos);
+                        } else if (item.getItemId() == R.id.action_archive) {
+                            moveToArchive(v, pos);
                         } else if (item.getItemId() == R.id.action_edit) {
                             edit(v);
                         }
@@ -96,6 +97,57 @@ public class NotesActivity extends BaseActivity implements
 
     }
 
+    @Override
+    public Loader<List<Note>> onCreateLoader(int id, Bundle args) {
+        mContentResolver = getContentResolver();
+        return new NotesLoader(NotesActivity.this, mContentResolver, BaseActivity.mType);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<List<Note>> loader, List<Note> data) {
+        this.mNotes = data;
+        final Thread[] thread = new Thread[mNotes.size()];
+        int threadCounter = 0;
+        for (final Note aNote : mNotes) {
+            if (AppConstant.GOOGLE_DRIVE_SELECTION == aNote.getStorageSelection()) {
+                GDUT.init(this);
+                if (checkPlayServices() && checkUserAccout()) {
+                    GDActions.init(this, GDUT.AM.getActiveEmil());
+                    GDActions.connect(true);
+                }
+                thread[threadCounter] = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        do {
+                            ArrayList<GDActions.GF> gfs = GDActions.search(AppSharedPreferences.getGoogleDriveResourceId(getApplicationContext()),
+                                    aNote.getImagePath(), GDUT.MIME_JPEG);
+                            if (gfs.size() > 0) {
+                                byte[] imageBytes = GDActions.read(gfs.get(0).id, 0);
+                                Bitmap bmp = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+                                aNote.setBitmap(bmp);
+                                mIsImageNotFound = false;
+                                mNotesAdapter.setData(mNotes);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mNotesAdapter.notifyImageObtained();
+                                    }
+                                });
+                            } else {
+                                aNote.setBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.ic_loading));
+                                mIsImageNotFound = true;
+                                try {
+                                    Thread.sleep(500);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        } while (mIsImageNotFound);
+                    }
+                });
+            }
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
