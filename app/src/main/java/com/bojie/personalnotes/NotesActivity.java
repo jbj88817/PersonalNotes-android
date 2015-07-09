@@ -3,6 +3,8 @@ package com.bojie.personalnotes;
 import android.content.ContentResolver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -14,11 +16,16 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 
 import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
+import com.dropbox.client2.exception.DropboxException;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -145,7 +152,103 @@ public class NotesActivity extends BaseActivity implements
                         } while (mIsImageNotFound);
                     }
                 });
+            } else if(AppConstant.DROP_BOX_SELECTION == aNote.getStorageSelection()) {
+                thread[threadCounter] = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        do {
+                            Drawable drawable = getImageFromDropbox(mDropboxAPI,
+                                    AppSharedPreferences.getDropBoxUploadPath(getApplicationContext()),
+                                    aNote.getImagePath());
+                            if (drawable != null) {
+                                Bitmap bitmap = ((BitmapDrawable)drawable).getBitmap();
+                                aNote.setBitmap(bitmap);
+                            }
+                            if (!mIsImageNotFound) {
+                                mNotesAdapter.setData(mNotes);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mNotesAdapter.notifyImageObtained();
+                                    }
+                                });
+                            }
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        } while (mIsImageNotFound);
+                    }
+                });
+
+                thread[threadCounter].start();
+                threadCounter++;
+            } else {
+                aNote.setHasNoImage(true);
             }
+        }
+        mNotesAdapter.setData(mNotes);
+        changeNoItemTag();
+    }
+
+    private Drawable getImageFromDropbox(DropboxAPI<?> mApi, String mPath, String filename) {
+        FileOutputStream fos;
+        Drawable drawable;
+        String cachePath = getApplicationContext().getCacheDir().getAbsolutePath() + "/" +filename;
+        File cacheFile = new File(cachePath);
+        if (cacheFile.exists()) {
+            mIsImageNotFound = false;
+            return Drawable.createFromPath(cachePath);
+        } else {
+            try {
+                DropboxAPI.Entry dirEnt = mApi.metadata(mPath, 1000, null, true, null);
+                if (!dirEnt.isDir || dirEnt.contents == null) {
+                    mIsImageNotFound = true;
+                }
+                ArrayList<DropboxAPI.Entry> thumbs = new ArrayList<>();
+                for (DropboxAPI.Entry ent : dirEnt.contents) {
+                    if (ent.thumbExists) {
+                        if (ent.fileName().startsWith(filename)) {
+                            thumbs.add(ent);
+                        }
+                    }
+                }
+                if (thumbs.size() == 0) {
+                    mIsImageNotFound = true;
+                } else {
+                    DropboxAPI.Entry ent = thumbs.get(0);
+                    String path = ent.path;
+                    try {
+                        fos = new FileOutputStream(cachePath);
+                    } catch (FileNotFoundException e) {
+                        return getResources().getDrawable(R.drawable.ic_image_deleted);
+                    }
+                    mApi.getThumbnail(path, fos, DropboxAPI.ThumbSize.BESTFIT_960x640,
+                            DropboxAPI.ThumbFormat.JPEG, null);
+                    drawable = Drawable.createFromPath(cachePath);
+                    mIsImageNotFound = false;
+                    return drawable;
+                }
+            } catch (DropboxException e) {
+                e.printStackTrace();
+                mIsImageNotFound = true;
+            }
+
+            drawable = getResources().getDrawable(R.drawable.ic_loading);
+            return drawable;
+        }
+    }
+
+    private void changeNoItemTag() {
+        TextView noItemTextView = (TextView) findViewById(R.id.no_item_textview);
+        if (mNotesAdapter.getItemCount() != 0 ){
+            noItemTextView.setVisibility(View.GONE);
+            mRecyclerView.setVisibility(View.VISIBLE);
+        } else {
+            noItemTextView.setText(AppConstant.EMPTY);
+            noItemTextView.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.GONE);
         }
     }
 
