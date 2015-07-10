@@ -1,6 +1,9 @@
 package com.bojie.personalnotes;
 
+import android.accounts.Account;
 import android.content.ContentResolver;
+import android.content.Intent;
+import android.content.IntentSender;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -21,6 +24,10 @@ import android.widget.TextView;
 import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
 import com.dropbox.client2.exception.DropboxException;
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.common.AccountPicker;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.File;
@@ -118,7 +125,7 @@ public class NotesActivity extends BaseActivity implements
         for (final Note aNote : mNotes) {
             if (AppConstant.GOOGLE_DRIVE_SELECTION == aNote.getStorageSelection()) {
                 GDUT.init(this);
-                if (checkPlayServices() && checkUserAccout()) {
+                if (checkPlayServices() && checkUserAccount()) {
                     GDActions.init(this, GDUT.AM.getActiveEmil());
                     GDActions.connect(true);
                 }
@@ -152,7 +159,7 @@ public class NotesActivity extends BaseActivity implements
                         } while (mIsImageNotFound);
                     }
                 });
-            } else if(AppConstant.DROP_BOX_SELECTION == aNote.getStorageSelection()) {
+            } else if (AppConstant.DROP_BOX_SELECTION == aNote.getStorageSelection()) {
                 thread[threadCounter] = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -161,7 +168,7 @@ public class NotesActivity extends BaseActivity implements
                                     AppSharedPreferences.getDropBoxUploadPath(getApplicationContext()),
                                     aNote.getImagePath());
                             if (drawable != null) {
-                                Bitmap bitmap = ((BitmapDrawable)drawable).getBitmap();
+                                Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
                                 aNote.setBitmap(bitmap);
                             }
                             if (!mIsImageNotFound) {
@@ -195,7 +202,7 @@ public class NotesActivity extends BaseActivity implements
     private Drawable getImageFromDropbox(DropboxAPI<?> mApi, String mPath, String filename) {
         FileOutputStream fos;
         Drawable drawable;
-        String cachePath = getApplicationContext().getCacheDir().getAbsolutePath() + "/" +filename;
+        String cachePath = getApplicationContext().getCacheDir().getAbsolutePath() + "/" + filename;
         File cacheFile = new File(cachePath);
         if (cacheFile.exists()) {
             mIsImageNotFound = false;
@@ -242,7 +249,7 @@ public class NotesActivity extends BaseActivity implements
 
     private void changeNoItemTag() {
         TextView noItemTextView = (TextView) findViewById(R.id.no_item_textview);
-        if (mNotesAdapter.getItemCount() != 0 ){
+        if (mNotesAdapter.getItemCount() != 0) {
             noItemTextView.setVisibility(View.GONE);
             mRecyclerView.setVisibility(View.VISIBLE);
         } else {
@@ -250,6 +257,94 @@ public class NotesActivity extends BaseActivity implements
             noItemTextView.setVisibility(View.VISIBLE);
             mRecyclerView.setVisibility(View.GONE);
         }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<List<Note>> loader) {
+        mNotesAdapter.setData(null);
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        if (!mIsInAuth) {
+            if (connectionResult.hasResolution()) {
+                try {
+                    mIsInAuth = true;
+                    connectionResult.startResolutionForResult(this, AppConstant.REQ_AUTH);
+                } catch (IntentSender.SendIntentException e) {
+                    e.printStackTrace();
+                    finish();
+                }
+            } else {
+                finish();
+            }
+        }
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+    }
+
+    private boolean checkUserAccount() {
+        String email = GDUT.AM.getActiveEmil();
+        Account account = GDUT.AM.getPrimaryAccnt(true);
+        if (email == null) {
+            if (account == null) {
+                account = GDUT.AM.getPrimaryAccnt(false);
+                Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null,
+                        new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, null, null, null, null);
+                startActivityForResult(accountIntent, AppConstant.REQ_ACCPICK);
+                return false;
+            } else {
+                GDUT.AM.setEmil(account.name);
+            }
+            return true;
+        }
+        account = GDUT.AM.getActiveAccnt();
+        if (account == null) {
+            Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null,
+                    new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, null, null, null, null);
+            startActivityForResult(accountIntent, AppConstant.REQ_ACCPICK);
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean checkPlayServices() {
+        int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (status != ConnectionResult.SUCCESS) {
+            if (GooglePlayServicesUtil.isUserRecoverableError(status)){
+                errorDialog(status, AppConstant.REQ_RECOVER);
+            } else {
+                finish();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void errorDialog(int errorCode, int requestCode) {
+        Bundle args = new Bundle();
+        args.putInt(AppConstant.DIALOG_ERROR, errorCode);
+        args.putInt(AppConstant.REQUEST_CODE, requestCode);
+        ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
+        dialogFragment.setArguments(args);
+        dialogFragment.show(getSupportFragmentManager(), AppConstant.DIALOG_ERROR);
+    }
+
+    @Override
+    public void onBackPressed() {
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
     }
 
     @Override
