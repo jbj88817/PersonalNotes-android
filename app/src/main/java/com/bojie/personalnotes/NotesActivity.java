@@ -2,12 +2,14 @@ package com.bojie.personalnotes;
 
 import android.accounts.Account;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -19,6 +21,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.dropbox.client2.DropboxAPI;
@@ -345,6 +349,62 @@ public class NotesActivity extends BaseActivity implements
         intent.addCategory(Intent.CATEGORY_HOME);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
+    }
+
+    private void moveToTrash() {
+        ContentValues values = new ContentValues();
+        TextView title = (TextView) findViewById(R.id.title_note_custom_home);
+        TextView description = (TextView) findViewById(R.id.description_note_custom_home);
+        TextView dateTime = (TextView) findViewById(R.id.date_time_note_custom_home);
+        values.put(TrashContract.TrashColumns.TRASH_TITLE, title.getText().toString());
+        values.put(TrashContract.TrashColumns.TRASH_DESCRIPTION, description.getText().toString());
+        values.put(TrashContract.TrashColumns.TRASH_DATE_TIME, dateTime.getText().toString());
+        ContentResolver cr = this.getContentResolver();
+        Uri uri = TrashContract.URI_TABLE;
+        cr.insert(uri, values);
+    }
+
+    private void moveToArchive(View view, int position) {
+        ContentValues values = new ContentValues();
+        TextView title = (TextView) findViewById(R.id.title_note_custom_home);
+        TextView description = (TextView) findViewById(R.id.description_note_custom_home);
+        TextView dateTime = (TextView) findViewById(R.id.date_time_note_custom_home);
+
+        LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.home_list);
+        int isList = linearLayout.getVisibility();
+        String listDescription = "";
+        if (isList == View.VISIBLE) {
+            NoteCustomList noteCustomList = (NoteCustomList) linearLayout.getChildAt(0);
+            for (int i = 0; i<noteCustomList.getChildCount();i++){
+                LinearLayout first = (LinearLayout) noteCustomList.getChildAt(i);
+                TextView cx = (TextView) first.getChildAt(0);
+                CheckBox bx = (CheckBox) first.getChildAt(1);
+                listDescription = description + cx.getText().toString() + bx.isChecked() + "%";
+            }
+            values.put(ArchivesContract.ArchivesColumns.ARCHIVES_TYPE, AppConstant.LIST);
+        } else {
+            listDescription = description.getText().toString();
+            values.put(ArchivesContract.ArchivesColumns.ARCHIVES_TYPE, AppConstant.NORMAL);
+        }
+
+        values.put(ArchivesContract.ArchivesColumns.ARCHIVES_DESCRIPTION, listDescription);
+        values.put(ArchivesContract.ArchivesColumns.ARCHIVES_TITLE, title.getText().toString());
+        values.put(ArchivesContract.ArchivesColumns.ARCHIVES_DATE_TIME, dateTime.getText().toString());
+        values.put(ArchivesContract.ArchivesColumns.ARCHIVES_CATEGORY, mTitle);
+
+        ContentResolver cr = this.getContentResolver();
+        Uri uri = ArchivesContract.URI_TABLE;
+        cr.insert(uri, values);
+        delete(view, position);
+    }
+
+    private void delete(View view, int postion) {
+        ContentResolver cr = this.getContentResolver();
+        String _ID = Integer.parseInt(((TextView)view.findViewById(R.id.id_note_custom_home)).getText().toString();
+        Uri uri = NotesContract.Notes.buildNoteUri(_ID);
+        cr.delete(uri, null, null);
+        mNotesAdapter.delete(postion);
+        changeNoItemTag();
     }
 
     @Override
