@@ -1,6 +1,8 @@
 package com.bojie.personalnotes;
 
 import android.accounts.Account;
+import android.accounts.AccountManager;
+import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -9,6 +11,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
@@ -22,6 +25,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -400,11 +404,60 @@ public class NotesActivity extends BaseActivity implements
 
     private void delete(View view, int postion) {
         ContentResolver cr = this.getContentResolver();
-        String _ID = Integer.parseInt(((TextView)view.findViewById(R.id.id_note_custom_home)).getText().toString();
+        String _ID = Integer.parseInt(((TextView) view.findViewById(R.id.id_note_custom_home)).getText().toString();
         Uri uri = NotesContract.Notes.buildNoteUri(_ID);
         cr.delete(uri, null, null);
         mNotesAdapter.delete(postion);
         changeNoItemTag();
+    }
+
+   private void edit(View view) {
+       Intent intent = new Intent(NotesActivity.this, NoteDetailActivity.class);
+       String id = ((TextView)view.findViewById(R.id.id_note_custom_home)).getText().toString();
+       intent.putExtra(AppConstant.ID, id);
+       LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.home_list);
+       int isList = linearLayout.getVisibility();
+       if (isList == View.VISIBLE) {
+           intent.putExtra(AppConstant.LIST, AppConstant.TRUE);
+       }
+       ImageView tempImageView = (ImageView) view.findViewById(R.id.image_note_custom_home);
+       if (tempImageView.getDrawable() != null) {
+           mSendingImage = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+       }
+
+       startActivity(intent);
+   }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case AppConstant.REQ_ACCPICK: {
+                if (resultCode == Activity.RESULT_OK && data!=null) {
+                    String email = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                    if (( GDUT.AM.setEmil(email)) == GDUT.AM.CHANGED) {
+                        GDActions.init(this, GDUT.AM.getActiveEmil());
+                        GDActions.connect(true);
+                    }
+                } else if(GDUT.AM.getActiveEmil() == null) {
+                    GDUT.AM.removeActiveAccnt();
+                    finish();
+                }
+                break;
+            }
+
+            case AppConstant.REQ_AUTH:
+
+            case AppConstant.REQ_RECOVER: {
+                mIsInAuth = false;
+                if (resultCode == Activity.RESULT_OK) {
+                    GDActions.connect(true);
+                } else if (resultCode == RESULT_CANCELED) {
+                    GDUT.AM.removeActiveAccnt();
+                    finish();
+                }
+            }
+        }
     }
 
     @Override
