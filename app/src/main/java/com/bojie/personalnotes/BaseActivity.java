@@ -164,7 +164,7 @@ public abstract class BaseActivity extends AppCompatActivity {
                         actAsReminder();
                         break;
                     case 2:
-                        mNextActivity = ArchivesActivity.class;
+                        mNextActivity = Archivesactivity.class;
                         mType = ARCHIVES;
                         break;
                     case 3:
