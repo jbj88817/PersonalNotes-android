@@ -20,7 +20,7 @@ public class DropboxAdapter extends RecyclerView.Adapter<DropboxAdapter.Recycler
 
     public DropboxAdapter(Context context, List<String> data) {
         this.mData = data;
-        mInflater = LayoutInflater.from(context)
+        mInflater = LayoutInflater.from(context);
     }
 
     @Override
