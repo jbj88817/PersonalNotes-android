@@ -404,7 +404,7 @@ public class NotesActivity extends BaseActivity implements
 
     private void delete(View view, int postion) {
         ContentResolver cr = this.getContentResolver();
-        String _ID = Integer.parseInt(((TextView) view.findViewById(R.id.id_note_custom_home)).getText().toString();
+        String _ID = ((TextView) view.findViewById(R.id.id_note_custom_home)).getText().toString();
         Uri uri = NotesContract.Notes.buildNoteUri(_ID);
         cr.delete(uri, null, null);
         mNotesAdapter.delete(postion);
