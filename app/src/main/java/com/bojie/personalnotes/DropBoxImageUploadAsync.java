@@ -58,7 +58,10 @@ public class DropBoxImageUploadAsync extends AsyncTask<Void, Long, Boolean> {
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
+        }
+
+        return false;
 
     }
-        return false;
-});
+
+}
