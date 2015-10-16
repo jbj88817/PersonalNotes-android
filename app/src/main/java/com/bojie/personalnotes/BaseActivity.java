@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -164,7 +165,7 @@ public abstract class BaseActivity extends AppCompatActivity {
                         actAsReminder();
                         break;
                     case 2:
-                        mNextActivity = Archivesactivity.class;
+                        mNextActivity = ArchivesActivity.class;
                         mType = ARCHIVES;
                         break;
                     case 3:
@@ -190,5 +191,9 @@ public abstract class BaseActivity extends AppCompatActivity {
                 mDrawerFragment.closeDrawer();
             }
         });
+    }
+
+    protected void showToast(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
     }
 }

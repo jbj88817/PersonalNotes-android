@@ -3,6 +3,8 @@ package com.bojie.personalnotes;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -11,7 +13,9 @@ import android.widget.TextView;
 import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
 
+import java.util.ArrayList;
 import java.util.EmptyStackException;
+import java.util.List;
 import java.util.Stack;
 
 /**
@@ -118,5 +122,107 @@ public class DropBoxPickerActivity extends BaseActivity
                         mAPI, getCurrentPath(), DropBoxPickerActivity.this).execute();
             }
         });
+    }
+
+    private void setUpList() {
+        RecyclerView recyclerView = (RecyclerView)findViewById(R.id.recycler_view_drop_box_directories);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getBaseContext());
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        mDropboxAdapter = new DropboxAdapter(getApplicationContext(), new ArrayList<String>());
+        recyclerView.setAdapter(mDropboxAdapter);
+        recyclerView.addOnItemTouchListener(new RecyclerItemClickListener(this, recyclerView,
+                new RecyclerItemClickListener.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(View view, int position) {
+                        TextView textView = (TextView) findViewById(R.id.drop_box_directory_name);
+                        String currentDirectory = textView.getText().toString();
+                        mDirectoryStack.push(currentDirectory);
+                        new DropBoxDirectoryListenerAsync(getApplicationContext(), mAPI,
+                                getCurrentPath(), DropBoxPickerActivity.this).execute();
+                    }
+
+                    @Override
+                    public void onItemLongClick(View view, int postion) {
+
+                    }
+                }));
+    }
+
+
+    private String getCurrentPath() {
+        String path = "";
+        for (String p : mDirectoryStack) {
+            if (!p.equals("/")) {
+                path = path + "/" + p;
+            }
+        }
+        return path;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private void authenticate() {
+        AndroidAuthSession session = DropBoxActions.buildSession(getApplicationContext());
+        mAPI = new DropboxAPI<AndroidAuthSession>(session);
+        mAPI.getSession().startOAuth2Authentication(DropBoxPickerActivity.this);
+        mAfterAuth = true;
+        AppSharedPreferences.setPersonalNotesPreference(getApplicationContext(), AppConstant.DROP_BOX_SELECTION);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mAfterAuth) {
+            AndroidAuthSession session = mAPI.getSession();
+            if (session.authenticationSuccessful()) {
+                try {
+
+                        session.finishAuthentication();
+                        DropBoxActions.storeAuth(session, getApplicationContext());
+                        AppSharedPreferences.isDropBoxAuthenticated(getApplicationContext(), true);
+                        initProgressDialog();
+                        new DropBoxDirectoryListenerAsync(getApplicationContext(),
+                                mAPI, getCurrentPath(), DropBoxPickerActivity.this).execute();
+
+
+                }catch (IllegalStateException e) {
+                    showToast("Could not authenticate with dropbox " +e.getLocalizedMessage());
+                }
+            }
+        }
+    }
+
+    private void logOut() {
+        mAPI.getSession().unlink();
+        DropBoxActions.clearKeys(getApplicationContext());
+    }
+
+    @Override
+    public void onDirectoryCreateFinished(String dirName) {
+        mDropboxAdapter.add(dirName);
+        mDropboxAdapter.notifyDataSetChanged();
+        TextView path = (TextView)findViewById(R.id.path_display);
+        path.setText(getCurrentPath());
+        mDialog.dismiss();
+    }
+
+    @Override
+    public void onLoadFinished(List<String> values) {
+        mDropboxAdapter.setData(values);
+        mDropboxAdapter.notifyDataSetChanged();
+        TextView path = (TextView) findViewById(R.id.path_display);
+        path.setText(getCurrentPath());
+        mDialog.dismiss();
+    }
+
+    private void initProgressDialog() {
+        mDialog = new ProgressDialog(DropBoxPickerActivity.this);
+        mDialog.setTitle("DropBox");
+        mDialog.setMessage("Retrieving directories...");
+        mDialog.show();
     }
 }
