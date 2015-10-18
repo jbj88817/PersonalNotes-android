@@ -20,6 +20,8 @@
             android:name=".NotesActivity"
             android:label="@string/title_activity_notes" >
         </activity>
+        <receiver android:name=".AlarmReceiver"
+                  android:process=":remote"/>
     </application>
 
 </manifest>
