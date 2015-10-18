@@ -30,9 +30,9 @@ public class GoogleDriveSelectionActivity extends BaseGoogleDriveActivity {
         try {
 
             startIntentSenderForResult(
-                    intentSender, REQUEST_CODE_OPENER, null,0,0,0);
+                    intentSender, REQUEST_CODE_OPENER, null, 0, 0, 0);
 
-        }catch (IntentSender.SendIntentException e){
+        } catch (IntentSender.SendIntentException e) {
 
         }
     }
@@ -42,18 +42,27 @@ public class GoogleDriveSelectionActivity extends BaseGoogleDriveActivity {
         switch (requestCode) {
             case REQUEST_CODE_OPENER:
                 if (data != null && resultCode == RESULT_OK) {
-                    mDriveId = (DriveId)data.getParcelableExtra(
+                    mDriveId = (DriveId) data.getParcelableExtra(
                             OpenFileActivityBuilder.EXTRA_RESPONSE_DRIVE_ID);
                     AppSharedPreferences.storeGoogleDriveResourceId(getApplicationContext(), mDriveId.getResourceId());
                     BaseActivity.actAsNote();
                     startActivity(new Intent(GoogleDriveSelectionActivity.this, GoogleDriveDirectoryNameGetterActivity.class));
-                   finish();
+                    finish();
                     return;
-                }  else {
+                } else {
                     startActivity(new Intent(GoogleDriveSelectionActivity.this, GoogleDriveDirectoryNameGetterActivity.class));
                     finish();
                     return;
                 }
+
+            default:
+                super.onActivityResult(requestCode, resultCode, data);
+                break;
         }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+        super.onConnectionSuspended(i);
     }
 }

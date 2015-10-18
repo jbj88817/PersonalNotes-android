@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -56,6 +57,11 @@ public class BaseGoogleDriveActivity extends Activity implements
     }
 
     @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         if (!connectionResult.hasResolution()) {
             GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), this, 0).show();
@@ -70,4 +76,9 @@ public class BaseGoogleDriveActivity extends Activity implements
     public GoogleApiClient getGoogleApiClient() {
         return mGoogleApiClient;
     }
+
+    protected void showMessage(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG).show();
+    }
+
 }
