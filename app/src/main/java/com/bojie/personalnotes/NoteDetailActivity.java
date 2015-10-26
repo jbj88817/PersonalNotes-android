@@ -1,5 +1,8 @@
 package com.bojie.personalnotes;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -23,6 +26,7 @@ import com.dropbox.client2.android.AndroidAuthSession;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.File;
+import java.util.Calendar;
 
 /**
  * Created by bojiejiang on 10/18/15.
@@ -294,6 +298,65 @@ public class NoteDetailActivity extends BaseActivity
                 });
             }
         });
+
+        mTitleEditText = (EditText) findViewById(R.id.make_note_title);
+        mNoteImage = (ImageView) findViewById(R.id.image_make_note);
+        mDescriptionEditText = (EditText) findViewById(R.id.make_note_detail);
+        sDateTextView = (TextView) findViewById(R.id.date_textview_make_note);
+        sTimeTextView = (TextView) findViewById(R.id.time_textview_make_note);
+        ImageView datePickerImageView = (ImageView) findViewById(R.id.date_picker_button);
+        ImageView dateTimeDeleteImageView = (ImageView) findViewById(R.id.delete_make_note);
+        dateTimeDeleteImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sDateTextView.setText("");
+                sTimeTextView.setText(AppConstant.NO_TIME);
+            }
+        });
+
+        datePickerImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AppDatePickerDialog datePickerDialog = new AppDatePickerDialog();
+                datePickerDialog.show(getSupportFragmentManager(), AppConstant.DATE_PICKER);
+            }
+        });
+
+        LinearLayout layout = (LinearLayout) findViewById(R.id.add_check_list_layout);
+        layout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mNoteCustomList.addNewCheckBox();
+            }
+        });
+    }
+
+
+    private Calendar getTargetTime() {
+        Calendar calNow = Calendar.getInstance();
+        Calendar calSet = (Calendar) calNow.clone();
+        calSet.set(Calendar.MONTH, sMonth);
+        calSet.set(Calendar.YEAR, sYear);
+        calSet.set(Calendar.DAY_OF_MONTH, sDay);
+        calSet.set(Calendar.HOUR_OF_DAY, sHour);
+        calSet.set(Calendar.MINUTE, sMinute);
+        calSet.set(Calendar.SECOND, sSecond);
+        calSet.set(Calendar.MILLISECOND, 0);
+        if(calSet.compareTo(calNow) <=0) {
+            calSet.add(Calendar.DATE, 1);
+        }
+
+        return calSet;
+    }
+
+    private void setAlarm(Calendar targetCal, Note note) {
+        Intent intent = new Intent(getBaseContext(), AlarmReceiver.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        intent.putExtra(AppConstant.REMINDER, note.convertToString());
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(getApplicationContext(),
+                note.getId(), intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        alarmManager.set(AlarmManager.RTC_WAKEUP, targetCal.getTimeInMillis(), pendingIntent);
     }
 
 }
