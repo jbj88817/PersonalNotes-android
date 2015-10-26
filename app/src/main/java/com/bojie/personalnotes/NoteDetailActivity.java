@@ -1,7 +1,12 @@
 package com.bojie.personalnotes;
 
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.provider.BaseColumns;
+import android.support.v7.widget.CardView;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -90,4 +95,56 @@ public class NoteDetailActivity extends BaseActivity
             }
         }
     }
-}
+
+
+    private void setValues(String id) {
+        String[] projection = {BaseColumns._ID,
+                NotesContract.NotesColumns.NOTES_TITLE,
+                NotesContract.NotesColumns.NOTES_DESCRIPTION,
+                NotesContract.NotesColumns.NOTES_DATE,
+                NotesContract.NotesColumns.NOTES_IMAGE,
+                NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION,
+                NotesContract.NotesColumns.NOTES_TIME};
+        // Query database - check parameters to return only partial records.
+        Uri r = NotesContract.URI_TABLE;
+        String selection = NotesContract.NotesColumns.NOTE_ID + " = " + id;
+        Cursor cursor = getContentResolver().query(r, projection, selection, null, null);
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                do {
+                    String title = cursor.getString(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_TITLE));
+                    String description = cursor.getString(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_DESCRIPTION));
+                    String time = cursor.getString(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_TIME));
+                    String date = cursor.getString(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_DATE));
+                    String image = cursor.getString(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_IMAGE));
+                    int storageSelection = cursor.getInt(cursor.getColumnIndex(NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION));
+                    mTitleEditText.setText(title);
+                    if (mIsList) {
+                        CardView cardView = (CardView) findViewById(R.id.card_view);
+                        cardView.setVisibility(View.GONE);
+                        setupList(description);
+                    } else {
+                        mDescriptionEditText.setText(description);
+                    }
+                    sTimeTextView.setText(time);
+                    sDateTextView.setText(date);
+                    mImagePath = image;
+                    if (!image.equals(AppConstant.NO_IMAGE)) {
+                        mNoteImage.setImageBitmap(NotesActivity.mSendingImage);
+                    }
+                    switch (storageSelection) {
+                        case AppConstant.GOOGLE_DRIVE_SELECTION:
+                            updateStorageSelection(null, R.drawable.ic_google_drive, AppConstant.GOOGLE_DRIVE_SELECTION);
+                            break;
+                        case AppConstant.DEVICE_SELECTION:
+                        case AppConstant.NONE_SELECTION:
+                            updateStorageSelection(null, R.drawable.ic_local, AppConstant.DEVICE_SELECTION);
+                            break;
+                        case AppConstant.DROP_BOX_SELECTION:
+                            updateStorageSelection(null, R.drawable.ic_dropbox, AppConstant.DROP_BOX_SELECTION);
+                            break;
+                    }
+                } while (cursor.moveToNext());
+            }
+        }
+    }
