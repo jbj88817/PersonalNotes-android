@@ -1,6 +1,8 @@
 package com.bojie.personalnotes;
 
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.PersistableBundle;
@@ -9,6 +11,7 @@ import android.support.v7.widget.CardView;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.dropbox.client2.DropboxAPI;
@@ -148,3 +151,73 @@ public class NoteDetailActivity extends BaseActivity
             }
         }
     }
+
+    private void setValues(Note note) {
+        getSupportActionBar().setTitle(AppConstant.REMINDERS);
+        String title = note.getTitle();
+        String description = note.getDescription();
+        String time = note.getTime();
+        String date = note.getDate();
+        String image = note.getImagePath();
+        if (note.getType().equals(AppConstant.LIST)) {
+            mIsList = true;
+        }
+        mTitleEditText.setText(title);
+        if (mIsList) {
+            initializeComponents(LIST);
+            CardView cardView = (CardView) findViewById(R.id.card_view);
+            cardView.setVisibility(View.GONE);
+            setUpList(description);
+        } else {
+            mDescriptionEditText.setText(description);
+        }
+        sTimeTextView.setText(time);
+        sDateTextView.setText(date);
+        mImagePath = image;
+        int storageSelection = note.getStorageSelection();
+        switch (storageSelection) {
+            case AppConstant.GOOGLE_DRIVE_SELECTION:
+                updateStorageSelection(null, R.drawable.ic_google_drive, AppConstant.GOOGLE_DRIVE_SELECTION);
+                break;
+            case AppConstant.DEVICE_SELECTION:
+            case AppConstant.NONE_SELECTION:
+                if (!mImagePath.equals(AppConstant.NO_IMAGE)) {
+                    updateStorageSelection(null, R.drawable.ic_local, AppConstant.DEVICE_SELECTION);
+                }
+                break;
+            case AppConstant.DROP_BOX_SELECTION:
+                updateStorageSelection(BitmapFactory.decodeFile(mImagePath), R.drawable.ic_dropbox, AppConstant.DROP_BOX_SELECTION);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private void updateStorageSelection(Bitmap bitmap, int storageSelectionResource, int selection) {
+        if (bitmap != null) {
+            mNoteImage.setImageBitmap(bitmap);
+        }
+        mStorageSelection.setBackgroundResource(storageSelectionResource);
+        AppSharedPreferences.setPersonalNotesPreference(getApplicationContext(), selection);
+    }
+
+    private void setUpList(String description) {
+        mDescription = description;
+        if (!mIsNotificationMode) {
+            mNoteCustomList.setUpForEditMode(description);
+        } else {
+            LinearLayout newItemLayout = (LinearLayout) findViewById(R.id.add_check_list_layout);
+            newItemLayout.setVisibility(View.GONE);
+            mNoteCustomList.setUpForListNotification(description);
+        }
+
+        LinearLayout layout = (LinearLayout) findViewById(R.id.add_check_list_layout);
+        layout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mNoteCustomList.addNewCheckBox();
+            }
+        });
+    }
+}
