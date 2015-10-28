@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.PersistableBundle;
@@ -29,7 +30,10 @@ import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
 import com.google.android.gms.common.api.GoogleApiClient;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Calendar;
 
 /**
@@ -234,23 +238,23 @@ public class NoteDetailActivity extends BaseActivity
     }
 
     private void initializeComponents(int choice) {
-        if(choice == LIST) {
+        if (choice == LIST) {
             CardView cardView = (CardView) findViewById(R.id.card_view);
             cardView.setVisibility(View.GONE);
             cardView = (CardView) findViewById(R.id.card_view_list);
             cardView.setVisibility(View.VISIBLE);
             mIsList = true;
-        } else if(choice == NORMAL) {
+        } else if (choice == NORMAL) {
             CardView cardView = (CardView) findViewById(R.id.card_view_list);
             cardView.setVisibility(View.GONE);
             mIsList = false;
         }
 
         mStorageSelection = (ImageView) findViewById(R.id.image_storage);
-        if(AppSharedPreferences.getUploadPreference(getApplicationContext()) ==
+        if (AppSharedPreferences.getUploadPreference(getApplicationContext()) ==
                 AppConstant.GOOGLE_DRIVE_SELECTION) {
             mStorageSelection.setBackgroundResource(R.drawable.ic_google_drive);
-        } else if(AppSharedPreferences.getUploadPreference(getApplicationContext()) ==
+        } else if (AppSharedPreferences.getUploadPreference(getApplicationContext()) ==
                 AppConstant.DROP_BOX_SELECTION) {
             mStorageSelection.setBackgroundResource(R.drawable.ic_dropbox);
         } else {
@@ -346,7 +350,7 @@ public class NoteDetailActivity extends BaseActivity
         calSet.set(Calendar.MINUTE, sMinute);
         calSet.set(Calendar.SECOND, sSecond);
         calSet.set(Calendar.MILLISECOND, 0);
-        if(calSet.compareTo(calNow) <=0) {
+        if (calSet.compareTo(calNow) <= 0) {
             calSet.add(Calendar.DATE, 1);
         }
 
@@ -367,11 +371,11 @@ public class NoteDetailActivity extends BaseActivity
         AndroidAuthSession session = DropBoxActions.buildSession(getApplicationContext());
         mApi = new DropboxAPI<AndroidAuthSession>(session);
         session = mApi.getSession();
-        if(session.authenticationSuccessful()) {
-            try  {
+        if (session.authenticationSuccessful()) {
+            try {
                 session.finishAuthentication();
                 DropBoxActions.storeAuth(session, getApplicationContext());
-            } catch(IllegalStateException e) {
+            } catch (IllegalStateException e) {
                 showToast(AppConstant.AUTH_ERROR_DROPBOX + e.getLocalizedMessage());
             }
         }
@@ -385,11 +389,11 @@ public class NoteDetailActivity extends BaseActivity
 
     private void saveInGoogleDrive() {
         GDUT.init(this);
-        if(checkPlayServices() && checkUserAccount()) {
+        if (checkPlayServices() && checkUserAccount()) {
             GDActions.init(this, GDUT.AM.getActiveEmil());
             GDActions.connect(true);
         }
-        if(mBundle != null) {
+        if (mBundle != null) {
             sTmpFlNm = mBundle.getString(AppConstant.TMP_FILE_NAME);
         }
         final String resourceId = AppConstant.NOTE_PREFIX + GDUT.time2Titl(null) + AppConstant.JPG;
@@ -401,7 +405,7 @@ public class NoteDetailActivity extends BaseActivity
                     File tmpFl = new File(mImagePath);
                     GDActions.create(AppSharedPreferences.getGoogleDriveResourceId(getApplicationContext()),
                             resourceId, GDUT.MIME_JPEG, GDUT.file2Bytes(tmpFl));
-                } catch(InterruptedException e) {
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                     // Add more error handling here
                 }
@@ -441,7 +445,7 @@ public class NoteDetailActivity extends BaseActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch(item.getItemId()) {
+        switch (item.getItemId()) {
 
             case R.id.action_camera:
                 mGoingToCameraOrGallery = true;
@@ -454,10 +458,10 @@ public class NoteDetailActivity extends BaseActivity
                 break;
 
             case android.R.id.home:
-                if(!mIsNotificationMode) {
+                if (!mIsNotificationMode) {
                     saveNote();
                 } else {
-                    if(!sTimeTextView.getText().toString().equals(AppConstant.NO_TIME)) {
+                    if (!sTimeTextView.getText().toString().equals(AppConstant.NO_TIME)) {
                         actAsReminder();
                     } else {
                         actAsNote();
@@ -488,7 +492,7 @@ public class NoteDetailActivity extends BaseActivity
         TextView dateTime = (TextView) findViewById(R.id.time_textview_make_note);
         values.put(ArchivesContract.ArchivesColumns.ARCHIVES_TITLE, title.getText().toString());
         values.put(ArchivesContract.ArchivesColumns.ARCHIVES_DATE_TIME, dateTime.getText().toString());
-        if(isList) {
+        if (isList) {
             type = AppConstant.LIST;
             values.put(ArchivesContract.ArchivesColumns.ARCHIVES_DESCRIPTION, mDescription);
         } else {
@@ -508,6 +512,115 @@ public class NoteDetailActivity extends BaseActivity
         Intent intent = new Intent(Intent.ACTION_PICK,
                 MediaStore.Images.Media.INTERNAL_CONTENT_URI);
         startActivityForResult(intent, TAKE_GALLERY_CODE);
+    }
+
+    protected void saveNote() {
+        if (mIsEditing) {
+            switch (AppSharedPreferences.getUploadPreference(getApplicationContext())) {
+                case AppConstant.DROP_BOX_SELECTION:
+                    if (!mImagePath.equals(AppConstant.NO_IMAGE)) {
+                        editForSaveInDropBox();
+                    } else {
+                        editForSaveInDevice();
+                    }
+                    break;
+
+                case AppConstant.GOOGLE_DRIVE_SELECTION:
+                    if (!mImagePath.equals(AppConstant.NO_IMAGE) && mIsImageSet) {
+                        editForSaveInGoogleDrive();
+                    } else {
+                        editForSaveInDevice();
+                    }
+                    break;
+
+                case AppConstant.DEVICE_SELECTION:
+                case AppConstant.NONE_SELECTION:
+                    editForSaveInDevice();
+                    break;
+            }
+        } else if (mTitleEditText.getText().toString().length() > 0 && !mGoingToCameraOrGallery) {
+            switch (AppSharedPreferences.getUploadPreference(getApplicationContext())) {
+                case AppConstant.DROP_BOX_SELECTION:
+                    if (!mImagePath.equals(AppConstant.NO_IMAGE)) {
+                        saveInDropBox();
+                    } else {
+                        saveInDevice();
+                    }
+                    break;
+
+                case AppConstant.GOOGLE_DRIVE_SELECTION:
+                    if (!mImagePath.equals(AppConstant.NO_IMAGE)) {
+                        saveInGoogleDrive();
+                    } else {
+                        saveInDevice();
+                    }
+                    break;
+
+                case AppConstant.DEVICE_SELECTION:
+                case AppConstant.NONE_SELECTION:
+                    saveInDevice();
+                    break;
+            }
+        }
+        startActivity(new Intent(NoteDetailActivity.this, NotesActivity.class));
+        finish();
+    }
+
+    private void editForSaveInDropBox() {
+        if (AppSharedPreferences.isDropBoxAuthenticated(getApplicationContext())) {
+            AndroidAuthSession session = DropBoxActions.buildSession(getApplicationContext());
+            mApi = new DropboxAPI<AndroidAuthSession>(session);
+            session = mApi.getSession();
+            if (session.authenticationSuccessful()) {
+                try {
+                    session.finishAuthentication();
+                    DropBoxActions.storeAuth(session, getApplicationContext());
+                } catch (IllegalStateException e) {
+                    showToast(AppConstant.AUTH_ERROR_DROPBOX + e.getLocalizedMessage());
+                }
+            }
+        }
+        ContentValues values = new createContentValues("", AppConstant.DROP_BOX_SELECTION, false);
+        if (mIsImageSet) {
+            String filename = AppConstant.NOTE_PREFIX + GDUT.time2Titl(null) + AppConstant.JPG;
+            values.put(NotesContract.NotesColumns.NOTES_IMAGE, filename);
+            mDropBoxFile = new File(getApplicationContext().getCacheDir(), filename);
+            try {
+                mDropBoxFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            Bitmap newImage = ((BitmapDrawable) mNoteImage.getDrawable()).getBitmap();
+            newImage.compress(Bitmap.CompressFormat.PNG, 0, bos);
+            byte[] bitmapData = bos.toByteArray();
+            try {
+                FileOutputStream fos = new FileOutputStream(mDropBoxFile);
+                fos.write(bitmapData);
+                fos.flush();
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            DropBoxImageUploadAsync uploadAsync = new DropBoxImageUploadAsync(this, mApi, mDropBoxFile, filename);
+            uploadAsync.execute();
+        }
+
+        updateNote(values);
+        createNoteAlarm(values, (int) System.currentTimeMillis());
+    }
+
+    private void editForSaveInDevice() {
+        ContentValues values = createContentValues(mImagePath, AppConstant.DEVICE_SELECTION, false);
+        updateNote(values);
+        createNoteAlarm(values, Integer.parseInt(mId));
+    }
+
+    private void callCamera() {
+        Intent cameraIntent = new Intent(
+                MediaStore.ACTION_IMAGE_CAPTURE);
+        startActivityForResult(cameraIntent, CAMERA_REQUEST);
     }
 
 }
