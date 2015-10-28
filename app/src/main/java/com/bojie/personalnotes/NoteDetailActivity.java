@@ -1,5 +1,7 @@
 package com.bojie.personalnotes;
 
+import android.accounts.AccountManager;
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
@@ -621,6 +623,106 @@ public class NoteDetailActivity extends BaseActivity
         Intent cameraIntent = new Intent(
                 MediaStore.ACTION_IMAGE_CAPTURE);
         startActivityForResult(cameraIntent, CAMERA_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Bitmap photo = null;
+        switch (requestCode) {
+            case AppConstant.REQ_ACCPICK:
+                if (resultCode == Activity.RESULT_OK && data != null) {
+                    String email = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                    if (GDUT.AM.setEmil(email) == GDUT.AM.CHANGED) {
+                        GDActions.init(this, GDUT.AM.getActiveEmil());
+                        GDActions.connect(true);
+                    }
+                } else if (GDUT.AM.getActiveEmil() == null) {
+                    GDUT.AM.removeActiveAccnt();
+                    finish();
+                }
+                break;
+            case AppConstant.REQ_AUTH:
+            case AppConstant.REQ_RECOVER:
+                sIsInAuth = false;
+                if (resultCode == Activity.RESULT_OK) {
+                    GDActions.connect(true);
+                } else if (resultCode == RESULT_CANCELED) {
+                    GDUT.AM.removeActiveAccnt();
+                    finish();
+                }
+                break;
+
+            case AppConstant.REQ_SCAN: {
+                if (resultCode == Activity.RESULT_OK) {
+                    final String titl = GDUT.time2Titl(null);
+                    if (titl != null && sTmpFlNm != null) {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                File tmpFl = null;
+                                GDActions.createTreeGDAA(GDUT.MYROOT, titl, GDUT.file2Bytes(tmpFl));
+                            }
+                        }).start();
+                    }
+                }
+                break;
+            }
+
+        }
+
+        if (requestCode == CAMERA_REQUEST && resultCode == RESULT_OK) {
+            mGoingToCameraOrGallery = false;
+            photo = (Bitmap) data.getExtras().get("data");
+            mNoteImage.setImageBitmap(photo);
+            Uri tempUri = getImageUri(getApplicationContext(), photo);
+            File finalFile = new File(getRealPathFromURI(tempUri));
+            mImagePath = finalFile.toString();
+            mIsImageSet = true;
+        } else if (requestCode == TAKE_GALLERY_CODE) {
+            if (resultCode == RESULT_OK) {
+                mGoingToCameraOrGallery = false;
+                Uri selectedImage = data.getData();
+                String[] filePathColumn = {MediaStore.Images.Media.DATA};
+                Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+                cursor.moveToFirst();
+                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                mImagePath = cursor.getString(columnIndex);
+                cursor.close();
+                File tempFile = new File(mImagePath);
+                photo = BitmapFactory.decodeFile(tempFile.getAbsolutePath());
+                mNoteImage.setVisibility(View.VISIBLE);
+                mNoteImage.setImageBitmap(photo);
+                mIsImageSet = true;
+            } else {
+                mIsImageSet = false;
+            }
+        }
+        if (mIsImageSet) {
+            mDropBoxFile = new File(mImagePath);
+        }
+    }
+
+    private Uri getImageUri(Context inContext, Bitmap inImage) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        inImage.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(),
+                inImage, "Title", null);
+        return Uri.parse(path);
+    }
+
+    private String getRealPathFromURI(Uri uri) {
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+        String result;
+        if (cursor != null) {
+            cursor.moveToFirst();
+            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+            result = cursor.getString(idx);
+        } else {
+            //Error
+            result = "";
+        }
+        return result;
     }
 
 }
