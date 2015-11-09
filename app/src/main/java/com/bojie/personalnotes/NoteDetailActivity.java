@@ -1,5 +1,6 @@
 package com.bojie.personalnotes;
 
+import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -8,6 +9,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -30,6 +32,8 @@ import android.widget.TextView;
 
 import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.ByteArrayOutputStream;
@@ -723,6 +727,118 @@ public class NoteDetailActivity extends BaseActivity
             result = "";
         }
         return result;
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        if(!sIsInAuth) {
+            if(connectionResult.hasResolution()) {
+                try {
+                    sIsInAuth = true;
+                    connectionResult.startResolutionForResult(this, AppConstant.REQ_AUTH);
+                } catch(IntentSender.SendIntentException e) {
+                    e.printStackTrace();
+                    // Add other error handling here
+                    finish();
+                }
+            } else {
+                finish();
+            }
+        }
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+    }
+
+    private boolean checkUserAccount() {
+        String email = GDUT.AM.getActiveEmil();
+        Account account = GDUT.AM.getPrimaryAccnt(true);
+        if(email == null) {
+            if(account == null) {
+                account = showAccountPicker();
+                return false;
+            } else {
+                // Only one a/c registered
+                GDUT.AM.setEmil(account.name);
+            }
+            return true;
+        }
+
+        account = GDUT.AM.getActiveAccnt();
+        if(account == null) {
+            account = showAccountPicker();
+            return false;
+        }
+        return true;
+    }
+
+    private boolean checkPlayServices() {
+        int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if(status != ConnectionResult.SUCCESS) {
+            if(GooglePlayServicesUtil.isUserRecoverableError(status)) {
+                errorDialog(status, AppConstant.REQ_RECOVER);
+            } else {
+                finish();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void errorDialog(int errorCode, int requestCode) {
+        Bundle args = new Bundle();
+        args.putInt(AppConstant.DIALOG_ERROR, errorCode);
+        args.putInt(AppConstant.REQUEST_CODE, requestCode);
+        ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
+        dialogFragment.setArguments(args);
+        dialogFragment.show(getFragmentManager(), AppConstant.DIALOG_ERROR);
+    }
+
+    private ContentValues createContentValues(String noteImage, int storageSelection, boolean isSave) {
+        if(noteImage == null || noteImage.equals("")) {
+            noteImage = AppConstant.NO_IMAGE;
+        }
+        ContentValues values = new ContentValues();
+        values.put(NotesContract.NotesColumns.NOTES_TITLE, mTitleEditText.getText().toString());
+        values.put(NotesContract.NotesColumns.NOTES_DATE, sDateTextView.getText().toString());
+        values.put(NotesContract.NotesColumns.NOTES_TIME, sTimeTextView.getText().toString());
+        if(mIsImageSet || isSave) {
+            values.put(NotesContract.NotesColumns.NOTES_IMAGE, noteImage);
+        }
+        values.put(NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION, storageSelection);
+        String type = AppConstant.NORMAL;
+        String description = mDescriptionEditText.getText().toString();
+        if(mIsList) {
+            description = mNoteCustomList.getLists();
+            type = AppConstant.LIST;
+        }
+
+        values.put(NotesContract.NotesColumns.NOTES_TYPE, type);
+        values.put(NotesContract.NotesColumns.NOTES_DESCRIPTION, description);
+
+        return values;
+    }
+
+    private int insertNote(ContentValues values) {
+        ContentResolver contentResolver = getContentResolver();
+        Uri uri = Uri.parse(NotesContract.BASE_CONTENT_URI + "/notes");
+        Uri returned = contentResolver.insert(uri, values);
+        String[] temp = returned.toString().split("/");
+        return Integer.parseInt(temp[temp.length - 1]);
+    }
+
+    private void updateNote(ContentValues values) {
+        ContentResolver contentResolver = getContentResolver();
+        Uri uri = Uri.parse(NotesContract.BASE_CONTENT_URI + "/notes");
+        String selection = NotesContract.NotesColumns.NOTE_ID + " = " + mId;
+        contentResolver.update(uri, values, selection, null);
     }
 
 }
