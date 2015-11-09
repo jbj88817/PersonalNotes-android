@@ -19,7 +19,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.provider.BaseColumns;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -57,23 +56,12 @@ import java.util.Locale;
  * Created by bojiejiang on 10/18/15.
  */
 public class NoteDetailActivity extends BaseActivity
-        implements GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
-
-    private static int sMonth, sHour, sDay, sMinute, sSecond;
-
-    private DropboxAPI<AndroidAuthSession> mAPI;
-    private File mDropBoxFile;
-    private String mCameraFileName;
-    private NoteCustomList mNoteCustomList;
-
+        implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
     // Constants
     public static final int NORMAL = 1;
     public static final int LIST = 2;
     public static final int CAMERA_REQUEST = 1888;
     public static final int TAKE_GALLERY_CODE = 1;
-
-
     private static int sMonth, sYear, sHour, sDay, sMinute, sSecond;
     private static TextView sDateTextView, sTimeTextView;
     private static boolean sIsInAuth;
@@ -95,8 +83,8 @@ public class NoteDetailActivity extends BaseActivity
     private String mDescription;
 
     @Override
-    public void onCreate(Bundle savedInstanceState, PersistableBundle persistentState) {
-        super.onCreate(savedInstanceState, persistentState);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         this.mBundle = savedInstanceState;
         setContentView(R.layout.activity_detail_note_layout);
         activateToolbarWithHomeEnabled();
@@ -110,28 +98,28 @@ public class NoteDetailActivity extends BaseActivity
         if (getIntent().getStringExtra(AppConstant.GO_TO_CAMERA) != null) {
             callCamera();
         }
+
     }
 
     private void setUpIfEditing() {
         if (getIntent().getStringExtra(AppConstant.ID) != null) {
             mId = getIntent().getStringExtra(AppConstant.ID);
             mIsEditing = true;
-            if (getIntent().getStringExtra(AppConstant.LIST_NOTES) != null) {
+            if (getIntent().getStringExtra(AppConstant.LIST) != null) {
                 initializeComponents(LIST);
             }
             setValues(mId);
             mStorageSelection.setEnabled(false);
-            if (getIntent().getStringExtra(AppConstant.REMINDER) != null) {
-                Note aNote = new Note(getIntent().getStringExtra(AppConstant.REMINDER));
-                mId = aNote.getId() + "";
-                mIsNotificationMode = true;
-                setValues(aNote);
-                removeFromReminder(aNote);
-                mStorageSelection.setEnabled(false);
-            }
+        }
+        if (getIntent().getStringExtra(AppConstant.REMINDER) != null) {
+            Note aNote = new Note(getIntent().getStringExtra(AppConstant.REMINDER));
+            mId = aNote.getId() + "";
+            mIsNotificationMode = true;
+            setValues(aNote);
+            removeFromReminder(aNote);
+            mStorageSelection.setEnabled(false);
         }
     }
-
 
     private void setValues(String id) {
         String[] projection = {BaseColumns._ID,
@@ -158,7 +146,7 @@ public class NoteDetailActivity extends BaseActivity
                     if (mIsList) {
                         CardView cardView = (CardView) findViewById(R.id.card_view);
                         cardView.setVisibility(View.GONE);
-                        setupList(description);
+                        setUpList(description);
                     } else {
                         mDescriptionEditText.setText(description);
                     }
@@ -183,6 +171,7 @@ public class NoteDetailActivity extends BaseActivity
                 } while (cursor.moveToNext());
             }
         }
+
     }
 
     private void setValues(Note note) {
@@ -294,7 +283,7 @@ public class NoteDetailActivity extends BaseActivity
                     @Override
                     public boolean onMenuItemClick(MenuItem menuItem) {
                         if (menuItem.getItemId() == R.id.action_device) {
-                            updateStorageSelection(null, R.drawable.ic_loading, AppConstant.DEVICE_SELECTION);
+                            updateStorageSelection(null, R.drawable.ic_local, AppConstant.DEVICE_SELECTION);
                         } else if (menuItem.getItemId() == R.id.action_google_drive) {
                             if (!AppSharedPreferences.isGoogleDriveAuthenticated(getApplicationContext())) {
                                 startActivity(new Intent(NoteDetailActivity.this, GoogleDriveSelectionActivity.class));
@@ -304,7 +293,7 @@ public class NoteDetailActivity extends BaseActivity
                             }
                         } else if (menuItem.getItemId() == R.id.action_dropbox) {
                             AppSharedPreferences.setPersonalNotesPreference(getApplicationContext(), AppConstant.DROP_BOX_SELECTION);
-                            if (!AppSharedPreferences.isGoogleDriveAuthenticated(getApplicationContext())) {
+                            if (!AppSharedPreferences.isDropBoxAuthenticated(getApplicationContext())) {
                                 startActivity(new Intent(NoteDetailActivity.this, DropBoxPickerActivity.class));
                                 finish();
                             } else {
@@ -356,7 +345,6 @@ public class NoteDetailActivity extends BaseActivity
         });
     }
 
-
     private Calendar getTargetTime() {
         Calendar calNow = Calendar.getInstance();
         Calendar calSet = (Calendar) calNow.clone();
@@ -401,7 +389,7 @@ public class NoteDetailActivity extends BaseActivity
                 mDropBoxFile, AppConstant.NOTE_PREFIX + GDUT.time2Titl(null) + AppConstant.JPG);
         upload.execute();
         ContentValues values = createContentValues(AppConstant.NOTE_PREFIX + GDUT.time2Titl(null), AppConstant.DROP_BOX_SELECTION, true);
-        createAlarm(values, insertNote(values));
+        createNoteAlarm(values, insertNote(values));
     }
 
     private void saveInGoogleDrive() {
@@ -597,7 +585,7 @@ public class NoteDetailActivity extends BaseActivity
                 }
             }
         }
-        ContentValues values = new createContentValues("", AppConstant.DROP_BOX_SELECTION, false);
+        ContentValues values = createContentValues("", AppConstant.DROP_BOX_SELECTION, false);
         if (mIsImageSet) {
             String filename = AppConstant.NOTE_PREFIX + GDUT.time2Titl(null) + AppConstant.JPG;
             values.put(NotesContract.NotesColumns.NOTES_IMAGE, filename);
@@ -664,7 +652,6 @@ public class NoteDetailActivity extends BaseActivity
         updateNote(values);
         createNoteAlarm(values, (int) System.currentTimeMillis());
     }
-
 
     private void editForSaveInDevice() {
         ContentValues values = createContentValues(mImagePath, AppConstant.DEVICE_SELECTION, false);
@@ -766,16 +753,9 @@ public class NoteDetailActivity extends BaseActivity
 
     private String getRealPathFromURI(Uri uri) {
         Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-        String result;
-        if (cursor != null) {
-            cursor.moveToFirst();
-            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
-            result = cursor.getString(idx);
-        } else {
-            //Error
-            result = "";
-        }
-        return result;
+        cursor.moveToFirst();
+        int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+        return cursor.getString(idx);
     }
 
     @Override
@@ -847,7 +827,7 @@ public class NoteDetailActivity extends BaseActivity
         args.putInt(AppConstant.REQUEST_CODE, requestCode);
         ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
         dialogFragment.setArguments(args);
-        dialogFragment.show(getFragmentManager(), AppConstant.DIALOG_ERROR);
+        dialogFragment.show(getSupportFragmentManager(), AppConstant.DIALOG_ERROR);
     }
 
     private ContentValues createContentValues(String noteImage, int storageSelection, boolean isSave) {
@@ -913,7 +893,7 @@ public class NoteDetailActivity extends BaseActivity
         return account;
     }
 
-    private static class AppDatePickerDialog extends DialogFragment
+    public static class AppDatePickerDialog extends DialogFragment
             implements DatePickerDialog.OnDateSetListener {
 
         private int mYear, mMonth, mDay;
@@ -954,7 +934,7 @@ public class NoteDetailActivity extends BaseActivity
     }
 
 
-    private static class AppTimePickerDialog extends DialogFragment
+    public static class AppTimePickerDialog extends DialogFragment
             implements TimePickerDialog.OnTimeSetListener {
         private int mHour, mMinute;
 
@@ -979,5 +959,4 @@ public class NoteDetailActivity extends BaseActivity
             sSecond = 0;
         }
     }
-
 }

@@ -32,12 +32,15 @@
                 android:layout_marginTop="10dp"
                 android:hint="@string/title"
                 android:padding="10dp"/>
+
         </android.support.v7.widget.CardView>
 
         <android.support.v7.widget.CardView
             android:id="@+id/card_view_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
             android:layout_marginTop="10dp"
             card_view:cardCornerRadius="4dp">
 
@@ -51,7 +54,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
 
                 </LinearLayout>
 
@@ -73,16 +75,18 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:text="@string/list_item"/>
+
                 </LinearLayout>
             </LinearLayout>
-
         </android.support.v7.widget.CardView>
 
         <android.support.v7.widget.CardView
             android:id="@+id/card_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_margin="10dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginTop="10dp"
             card_view:cardCornerRadius="4dp">
 
             <RelativeLayout
@@ -102,6 +106,7 @@
             </RelativeLayout>
         </android.support.v7.widget.CardView>
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -110,36 +115,45 @@
             android:padding="10dp">
 
             <ImageView
+                android:id="@+id/image_storage"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/image_storage"/>
+                android:layout_height="wrap_content"/>
 
             <ImageView
+                android:id="@+id/date_picker_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/date_picker_button"
                 android:src="@android:drawable/ic_menu_my_calendar"/>
 
             <TextView
+                android:id="@+id/date_textview_make_note"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:id="@+id/date_textview_make_note"
+                android:layout_marginLeft="10dp"
+                android:layout_marginStart="10dp"
+                android:gravity="center"
+                android:text=""/>
+
+            <TextView
+                android:id="@+id/time_textview_make_note"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_marginLeft="10dp"
                 android:layout_marginStart="10dp"
                 android:gravity="center"
                 android:text="@string/NO_TIME"/>
 
             <ImageView
+                android:id="@+id/delete_make_note"
                 android:layout_width="20dp"
                 android:layout_height="wrap_content"
-                android:id="@+id/delete_make_note"
                 android:layout_marginLeft="10dp"
                 android:layout_marginStart="10dp"
-                android:alpha="0.8"
+                android:alpha="0.08"
                 android:background="@color/notesCardBody"
                 android:src="@android:drawable/ic_delete"/>
-
         </LinearLayout>
+
 
     </LinearLayout>
 

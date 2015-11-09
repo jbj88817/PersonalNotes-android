@@ -75,6 +75,7 @@ public class NoteCustomList extends LinearLayout {
     }
 
     public void setUpForEditMode(String listEntries) {
+
         setOrientation(VERTICAL);
         mTextBoxes = new ArrayList<>();
         String[] listEntryTokens = listEntries.split("%");
@@ -174,7 +175,7 @@ public class NoteCustomList extends LinearLayout {
         }
     }
 
-    public void addNewCheckbox() {
+    public void addNewCheckBox() {
         mListItem = new LinearLayout(mContext);
         mListItem.setOrientation(HORIZONTAL);
         final ImageView deleteImageView = new ImageView(mContext);
@@ -233,5 +234,4 @@ public class NoteCustomList extends LinearLayout {
 
         return stringToReturn;
     }
-
 }

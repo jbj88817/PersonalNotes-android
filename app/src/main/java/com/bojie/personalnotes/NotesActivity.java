@@ -11,7 +11,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
@@ -24,7 +23,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -45,8 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NotesActivity extends BaseActivity implements
-        LoaderManager.LoaderCallbacks<List<Note>>,
-        GoogleApiClient.ConnectionCallbacks,
+        LoaderManager.LoaderCallbacks<List<Note>>, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
     private List<Note> mNotes;
@@ -61,7 +58,7 @@ public class NotesActivity extends BaseActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_notes);
+        setContentView(R.layout.activity_all_layout);
         activateToolbar();
         setUpForDropbox();
         setUpNavigationDrawer();
@@ -70,9 +67,10 @@ public class NotesActivity extends BaseActivity implements
     }
 
     private void setUpForDropbox() {
-        AndroidAuthSession session = DropboxActions.buildSession(getApplicationContext());
+        AndroidAuthSession session = DropBoxActions.buildSession(getApplicationContext());
         mDropboxAPI = new DropboxAPI<AndroidAuthSession>(session);
     }
+
 
     private void setUpRecyclerView() {
         mContentResolver = getContentResolver();
@@ -92,13 +90,13 @@ public class NotesActivity extends BaseActivity implements
             }
 
             @Override
-            public void onItemLongClick(View view, int postion) {
+            public void onItemLongClick(View view, final int position) {
                 PopupMenu popupMenu = new PopupMenu(NotesActivity.this, view);
                 MenuInflater inflater = popupMenu.getMenuInflater();
-                inflater.inflate(R.menu_ations_notes, popupMenu.getMenu());
+                inflater.inflate(R.menu.action_notes, popupMenu.getMenu());
                 popupMenu.show();
                 final View v = view;
-                final int pos = postion;
+                final int pos = position;
                 popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
                     @Override
                     public boolean onMenuItemClick(MenuItem item) {
@@ -110,13 +108,12 @@ public class NotesActivity extends BaseActivity implements
                         } else if (item.getItemId() == R.id.action_edit) {
                             edit(v);
                         }
+
                         return false;
                     }
                 });
             }
-
         }));
-
     }
 
     @Override
@@ -128,7 +125,7 @@ public class NotesActivity extends BaseActivity implements
     @Override
     public void onLoadFinished(Loader<List<Note>> loader, List<Note> data) {
         this.mNotes = data;
-        final Thread[] thread = new Thread[mNotes.size()];
+        Thread[] thread = new Thread[mNotes.size()];
         int threadCounter = 0;
         for (final Note aNote : mNotes) {
             if (AppConstant.GOOGLE_DRIVE_SELECTION == aNote.getStorageSelection()) {
@@ -167,6 +164,10 @@ public class NotesActivity extends BaseActivity implements
                         } while (mIsImageNotFound);
                     }
                 });
+                thread[threadCounter].start();
+                threadCounter++;
+
+
             } else if (AppConstant.DROP_BOX_SELECTION == aNote.getStorageSelection()) {
                 thread[threadCounter] = new Thread(new Runnable() {
                     @Override
@@ -196,7 +197,6 @@ public class NotesActivity extends BaseActivity implements
                         } while (mIsImageNotFound);
                     }
                 });
-
                 thread[threadCounter].start();
                 threadCounter++;
             } else {
@@ -221,7 +221,7 @@ public class NotesActivity extends BaseActivity implements
                 if (!dirEnt.isDir || dirEnt.contents == null) {
                     mIsImageNotFound = true;
                 }
-                ArrayList<DropboxAPI.Entry> thumbs = new ArrayList<>();
+                ArrayList<DropboxAPI.Entry> thumbs = new ArrayList<DropboxAPI.Entry>();
                 for (DropboxAPI.Entry ent : dirEnt.contents) {
                     if (ent.thumbExists) {
                         if (ent.fileName().startsWith(filename)) {
@@ -236,6 +236,7 @@ public class NotesActivity extends BaseActivity implements
                     String path = ent.path;
                     try {
                         fos = new FileOutputStream(cachePath);
+
                     } catch (FileNotFoundException e) {
                         return getResources().getDrawable(R.drawable.ic_image_deleted);
                     }
@@ -299,14 +300,15 @@ public class NotesActivity extends BaseActivity implements
 
     }
 
+
     private boolean checkUserAccount() {
         String email = GDUT.AM.getActiveEmil();
         Account account = GDUT.AM.getPrimaryAccnt(true);
         if (email == null) {
             if (account == null) {
                 account = GDUT.AM.getPrimaryAccnt(false);
-                Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null,
-                        new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, null, null, null, null);
+                Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true,
+                        null, null, null, null);
                 startActivityForResult(accountIntent, AppConstant.REQ_ACCPICK);
                 return false;
             } else {
@@ -316,25 +318,27 @@ public class NotesActivity extends BaseActivity implements
         }
         account = GDUT.AM.getActiveAccnt();
         if (account == null) {
-            Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null,
-                    new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, null, null, null, null);
+            Intent accountIntent = AccountPicker.newChooseAccountIntent(account, null, new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true,
+                    null, null, null, null);
             startActivityForResult(accountIntent, AppConstant.REQ_ACCPICK);
             return false;
         }
 
         return true;
+
     }
 
     private boolean checkPlayServices() {
         int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
         if (status != ConnectionResult.SUCCESS) {
-            if (GooglePlayServicesUtil.isUserRecoverableError(status)){
+            if (GooglePlayServicesUtil.isUserRecoverableError(status)) {
                 errorDialog(status, AppConstant.REQ_RECOVER);
             } else {
                 finish();
             }
             return false;
         }
+
         return true;
     }
 
@@ -345,6 +349,14 @@ public class NotesActivity extends BaseActivity implements
         ErrorDialogFragment dialogFragment = new ErrorDialogFragment();
         dialogFragment.setArguments(args);
         dialogFragment.show(getSupportFragmentManager(), AppConstant.DIALOG_ERROR);
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_notes, menu);
+        return true;
     }
 
     @Override
@@ -379,12 +391,13 @@ public class NotesActivity extends BaseActivity implements
         String listDescription = "";
         if (isList == View.VISIBLE) {
             NoteCustomList noteCustomList = (NoteCustomList) linearLayout.getChildAt(0);
-            for (int i = 0; i<noteCustomList.getChildCount();i++){
-                LinearLayout first = (LinearLayout) noteCustomList.getChildAt(i);
-                TextView cx = (TextView) first.getChildAt(0);
-                CheckBox bx = (CheckBox) first.getChildAt(1);
-                listDescription = description + cx.getText().toString() + bx.isChecked() + "%";
-            }
+            listDescription = noteCustomList.getLists();
+//            for(int i=0; i<noteCustomList.getChildCount(); i++) {
+//                LinearLayout first = (LinearLayout) noteCustomList.getChildAt(i);
+//                CheckBox bx = (CheckBox) first.getChildAt(0);
+//                TextView cx = (TextView) first.getChildAt(1);
+//                listDescription = description + cx.getText().toString() + bx.isChecked() + "%";
+//            }
             values.put(ArchivesContract.ArchivesColumns.ARCHIVES_TYPE, AppConstant.LIST);
         } else {
             listDescription = description.getText().toString();
@@ -402,44 +415,43 @@ public class NotesActivity extends BaseActivity implements
         delete(view, position);
     }
 
-    private void delete(View view, int postion) {
+    private void delete(View view, int position) {
         ContentResolver cr = this.getContentResolver();
         String _ID = ((TextView) view.findViewById(R.id.id_note_custom_home)).getText().toString();
         Uri uri = NotesContract.Notes.buildNoteUri(_ID);
         cr.delete(uri, null, null);
-        mNotesAdapter.delete(postion);
+        mNotesAdapter.delete(position);
         changeNoItemTag();
     }
 
-   private void edit(View view) {
-       Intent intent = new Intent(NotesActivity.this, NoteDetailActivity.class);
-       String id = ((TextView)view.findViewById(R.id.id_note_custom_home)).getText().toString();
-       intent.putExtra(AppConstant.ID, id);
-       LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.home_list);
-       int isList = linearLayout.getVisibility();
-       if (isList == View.VISIBLE) {
-           intent.putExtra(AppConstant.LIST, AppConstant.TRUE);
-       }
-       ImageView tempImageView = (ImageView) view.findViewById(R.id.image_note_custom_home);
-       if (tempImageView.getDrawable() != null) {
-           mSendingImage = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
-       }
-
-       startActivity(intent);
-   }
+    private void edit(View view) {
+        Intent intent = new Intent(NotesActivity.this, NoteDetailActivity.class);
+        String id = ((TextView) view.findViewById(R.id.id_note_custom_home)).getText().toString();
+        intent.putExtra(AppConstant.ID, id);
+        LinearLayout linearLayout = (LinearLayout) view.findViewById(R.id.home_list);
+        int isList = linearLayout.getVisibility();
+        if (isList == View.VISIBLE) {
+            intent.putExtra(AppConstant.LIST, AppConstant.TRUE);
+        }
+        ImageView tempImageView = (ImageView) view.findViewById(R.id.image_note_custom_home);
+        if (tempImageView.getDrawable() != null) {
+            mSendingImage = ((BitmapDrawable) tempImageView.getDrawable()).getBitmap();
+        }
+        startActivity(intent);
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case AppConstant.REQ_ACCPICK: {
-                if (resultCode == Activity.RESULT_OK && data!=null) {
+                if (resultCode == Activity.RESULT_OK && data != null) {
                     String email = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-                    if (( GDUT.AM.setEmil(email)) == GDUT.AM.CHANGED) {
+                    if (GDUT.AM.setEmil(email) == GDUT.AM.CHANGED) {
                         GDActions.init(this, GDUT.AM.getActiveEmil());
                         GDActions.connect(true);
                     }
-                } else if(GDUT.AM.getActiveEmil() == null) {
+                } else if (GDUT.AM.getActiveEmil() == null) {
                     GDUT.AM.removeActiveAccnt();
                     finish();
                 }
@@ -456,15 +468,9 @@ public class NotesActivity extends BaseActivity implements
                     GDUT.AM.removeActiveAccnt();
                     finish();
                 }
+                break;
             }
         }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_notes, menu);
-        return true;
     }
 
     @Override

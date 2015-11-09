@@ -15,8 +15,8 @@ import com.google.android.gms.drive.Metadata;
  */
 public class GoogleDriveDirectoryNameGetterActivity extends BaseGoogleDriveActivity {
 
-    private final ResultCallback<DriveResource.MetadataResult> mMetadataCallback =
-            new ResultCallback<DriveResource.MetadataResult>() {
+    private final ResultCallback<DriveResource.MetadataResult> mMetadataCallback = new
+            ResultCallback<DriveResource.MetadataResult>() {
                 @Override
                 public void onResult(DriveResource.MetadataResult metadataResult) {
                     if (!metadataResult.getStatus().isSuccess()) {
@@ -35,7 +35,7 @@ public class GoogleDriveDirectoryNameGetterActivity extends BaseGoogleDriveActiv
                 @Override
                 public void onResult(DriveApi.DriveIdResult driveIdResult) {
                     if (!driveIdResult.getStatus().isSuccess()) {
-                        showMessage("Cannot find driveId, Are you authorized to view this file");
+                        showMessage("Cannot find driveId. Are you authorized to view this file");
                         return;
                     }
                     DriveFile file = Drive.DriveApi.getFile(getGoogleApiClient(), driveIdResult.getDriveId());
@@ -53,13 +53,20 @@ public class GoogleDriveDirectoryNameGetterActivity extends BaseGoogleDriveActiv
             AppSharedPreferences.isGoogleDriveAuthenticated(getApplicationContext(), true);
             showMessage("Image location set in Google Drive");
         } catch (IllegalStateException e) {
-            showMessage("An error occured while selected the folder. Sync issue? Please try again.");
+            // this can happen when a newly created directory is selected
+            showMessage("An error occured while selected the folder.  Sync issue? Please try again");
             startActivity(new Intent(GoogleDriveDirectoryNameGetterActivity.this, GoogleDriveSelectionActivity.class));
+            finish();
+        } catch (IllegalArgumentException e) {
+            showMessage("An error occured while selected the folder.  Sync issue? Please try again");
+            startActivity(new Intent(GoogleDriveDirectoryNameGetterActivity.this, GoogleDriveSelectionActivity.class));
+            finish();
+
         }
     }
 
     @Override
     public void onConnectionSuspended(int i) {
-        super.onConnectionSuspended(i);
+
     }
 }

@@ -13,7 +13,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -118,7 +117,7 @@ public class TrashActivity extends BaseActivity implements
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() == R.id.action_empty_trash) {
+        if (item.getItemId() == R.id.action_empty_trash) {
             new AppDatabase(getApplicationContext()).emptyTrash();
             mTrashAdapter.setData(new ArrayList<Trash>());
             mTrashAdapter.notifyDataSetChanged();
@@ -127,10 +126,4 @@ public class TrashActivity extends BaseActivity implements
         }
         return super.onOptionsItemSelected(item);
     }
-
-    private void showToast(String msg) {
-        Toast error = Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG);
-        error.show();
-    }
-
 }

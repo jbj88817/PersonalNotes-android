@@ -16,6 +16,7 @@ import java.util.List;
  * Created by bojiejiang on 5/5/15.
  */
 public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteHolder> {
+
     private LayoutInflater mInflater;
     private List<Note> mNotes = Collections.emptyList();
     private Context mContext;
@@ -60,7 +61,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteHolder> 
         if (mNotes.get(position).getBitmap() != null) {
             holder.mImage.setImageBitmap(mNotes.get(position).getBitmap());
             holder.mImage.setVisibility(View.VISIBLE);
-        } else if (mNotes.get(position).getImagePath().equals(AppConstant.NO_IMAGE)) {
+        } else if (mNotes.get(position).getImagePath() == null || mNotes.get(position).getImagePath().equals(AppConstant.NO_IMAGE)) {
             // No image, so hide.
             holder.mImage.setVisibility(View.GONE);
         } else {
@@ -68,6 +69,7 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteHolder> 
             holder.mImage.setVisibility(View.VISIBLE);
         }
     }
+
 
     @Override
     public int getItemCount() {
@@ -109,4 +111,5 @@ public class NotesAdapter extends RecyclerView.Adapter<NotesAdapter.NoteHolder> 
             mImage = (ImageView) itemView.findViewById(R.id.image_note_custom_home);
         }
     }
+
 }
