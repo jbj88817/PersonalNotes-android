@@ -32,6 +32,8 @@ import android.widget.TextView;
 
 import com.dropbox.client2.DropboxAPI;
 import com.dropbox.client2.android.AndroidAuthSession;
+import com.google.android.gms.auth.GoogleAuthUtil;
+import com.google.android.gms.common.AccountPicker;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -617,6 +619,44 @@ public class NoteDetailActivity extends BaseActivity
         createNoteAlarm(values, (int) System.currentTimeMillis());
     }
 
+    private void editForSaveInGoogleDrive() {
+        GDUT.init(this);
+        final String resourceId = AppConstant.NOTE_PREFIX + GDUT.time2Titl(null) + AppConstant.JPG;
+        if(checkPlayServices() && checkUserAccount()) {
+            GDActions.init(this, GDUT.AM.getActiveEmil());
+            GDActions.connect(true);
+        }
+        if(mBundle != null) {
+            sTmpFlNm = mBundle.getString(AppConstant.TMP_FILE_NAME);
+        }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                    if(mIsImageSet) {
+                        File tmpFL = null;
+                        try {
+                            tmpFL = new File(mImagePath);
+                            GDActions.create(AppSharedPreferences.getGoogleDriveResourceId(getApplicationContext()),
+                                    resourceId, GDUT.MIME_JPEG, GDUT.file2Bytes(tmpFL));
+                        } finally {
+//                            if(tmpFL != null) {
+//                                tmpFL.delete();
+//                            }
+                        }
+                    }
+                } catch(InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        ContentValues values = createContentValues(resourceId, AppConstant.GOOGLE_DRIVE_SELECTION,  false);
+        updateNote(values);
+        createNoteAlarm(values, (int) System.currentTimeMillis());
+    }
+    
+
     private void editForSaveInDevice() {
         ContentValues values = createContentValues(mImagePath, AppConstant.DEVICE_SELECTION, false);
         updateNote(values);
@@ -839,6 +879,29 @@ public class NoteDetailActivity extends BaseActivity
         Uri uri = Uri.parse(NotesContract.BASE_CONTENT_URI + "/notes");
         String selection = NotesContract.NotesColumns.NOTE_ID + " = " + mId;
         contentResolver.update(uri, values, selection, null);
+    }
+
+    private void createNoteAlarm(ContentValues values, int id) {
+        if(!sTimeTextView.getText().toString().equals(AppConstant.NO_TIME)) {
+            Note note = new Note(values.getAsString(NotesContract.NotesColumns.NOTES_TITLE),
+                    values.getAsString(NotesContract.NotesColumns.NOTES_DESCRIPTION),
+                    values.getAsString(NotesContract.NotesColumns.NOTES_DATE),
+                    values.getAsString(NotesContract.NotesColumns.NOTES_TIME),
+                    id,
+                    values.getAsInteger(NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION),
+                    values.getAsString(NotesContract.NotesColumns.NOTES_TYPE));
+            note.setImagePath(values.getAsString(NotesContract.NotesColumns.NOTES_IMAGE));
+            setAlarm(getTargetTime(), note);
+
+        }
+    }
+
+    private Account showAccountPicker() {
+        Account account = GDUT.AM.getPrimaryAccnt(false);
+        Intent intent = AccountPicker.newChooseAccountIntent(account, null,
+                new String[]{GoogleAuthUtil.GOOGLE_ACCOUNT_TYPE}, true, null, null, null, null);
+        startActivityForResult(intent, AppConstant.REQ_ACCPICK);
+        return account;
     }
 
 }
