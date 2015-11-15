@@ -14,29 +14,25 @@ import java.util.List;
  * Created by bojiejiang on 6/13/15.
  */
 public class TrashLoader extends AsyncTaskLoader<List<Trash>> {
-
     private List<Trash> mTrash;
     private ContentResolver mContentResolver;
     private Cursor mCursor;
 
-    public TrashLoader(Context context, ContentResolver contentResolver) {
-        super(context);
-        mContentResolver = contentResolver;
+    public TrashLoader(Context ctx, ContentResolver cr) {
+        super(ctx);
+        this.mContentResolver = cr;
     }
 
     @Override
     public List<Trash> loadInBackground() {
         List<Trash> entries = new ArrayList<>();
-        String[] projection = {
-                BaseColumns._ID,
+        String[] projection = {BaseColumns._ID,
                 TrashContract.TrashColumns.TRASH_TITLE,
                 TrashContract.TrashColumns.TRASH_DESCRIPTION,
-                TrashContract.TrashColumns.TRASH_DATE_TIME,
+                TrashContract.TrashColumns.TRASH_DATE_TIME
         };
-
         Uri uri = TrashContract.URI_TABLE;
-        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + "DESC");
-
+        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + " DESC");
         if (mCursor != null) {
             if (mCursor.moveToFirst()) {
                 do {
@@ -44,8 +40,10 @@ public class TrashLoader extends AsyncTaskLoader<List<Trash>> {
                     String description = mCursor.getString(mCursor.getColumnIndex(TrashContract.TrashColumns.TRASH_DESCRIPTION));
                     String dateTime = mCursor.getString(mCursor.getColumnIndex(TrashContract.TrashColumns.TRASH_DATE_TIME));
                     int _id = mCursor.getInt(mCursor.getColumnIndex(BaseColumns._ID));
-                    Trash Trash = new Trash(_id, title, description, dateTime);
-                    entries.add(Trash);
+                    Trash trash = new Trash(_id, title, description, dateTime);
+
+                    entries.add(trash);
+
                 } while (mCursor.moveToNext());
             }
         }
@@ -53,32 +51,26 @@ public class TrashLoader extends AsyncTaskLoader<List<Trash>> {
     }
 
     @Override
-    public void deliverResult(List<Trash> Trash) {
+    public void deliverResult(List<Trash> trashs) {
         if (isReset()) {
-            if (Trash != null) {
+            if (trashs != null) {
                 releaseResources();
                 return;
             }
         }
-        List<Trash> oldNotes = mTrash;
-        mTrash = Trash;
-        if (isStarted()) {
-            super.deliverResult(Trash);
-        }
-        if (oldNotes != null && oldNotes != Trash) {
-            releaseResources();
-        }
+        List<Trash> oldTrash = mTrash;
+        mTrash = trashs;
+        if (isStarted())
+            super.deliverResult(trashs);
+        if (oldTrash != null && oldTrash != trashs) releaseResources();
     }
 
+
+    @Override
     protected void onStartLoading() {
-        if (mTrash != null) {
-            deliverResult(mTrash);
-        }
-        if (takeContentChanged()) {
-            forceLoad();
-        } else if (mTrash == null) {
-            forceLoad();
-        }
+        if (mTrash != null) deliverResult(mTrash);
+        if (takeContentChanged()) forceLoad();
+        else if (mTrash == null) forceLoad();
     }
 
     @Override
@@ -96,8 +88,8 @@ public class TrashLoader extends AsyncTaskLoader<List<Trash>> {
     }
 
     @Override
-    public void onCanceled(List<Trash> Trash) {
-        super.onCanceled(Trash);
+    public void onCanceled(List<Trash> trash) {
+        super.onCanceled(trash);
         releaseResources();
     }
 
@@ -110,7 +102,3 @@ public class TrashLoader extends AsyncTaskLoader<List<Trash>> {
         mCursor.close();
     }
 }
-
-
-
-

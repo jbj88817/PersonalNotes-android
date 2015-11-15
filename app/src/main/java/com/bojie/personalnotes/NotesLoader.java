@@ -18,15 +18,13 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
     private List<Note> mNotes;
     private ContentResolver mContentResolver;
     private Cursor mCursor;
-    private int mType; // Reminder or a note
+    private int mType;   // Reminder or a note
 
     public NotesLoader(Context context, ContentResolver contentResolver, int type) {
         super(context);
         mContentResolver = contentResolver;
         mType = type;
-
     }
-
 
     @Override
     public List<Note> loadInBackground() {
@@ -39,12 +37,10 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
                 NotesContract.NotesColumns.NOTES_DATE,
                 NotesContract.NotesColumns.NOTES_TIME,
                 NotesContract.NotesColumns.NOTES_IMAGE,
-                NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION
-        };
+                NotesContract.NotesColumns.NOTES_IMAGE_STORAGE_SELECTION};
 
         Uri uri = NotesContract.URI_TABLE;
-        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + "DESC");
-
+        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + " DESC");
         if (mCursor != null) {
             if (mCursor.moveToFirst()) {
                 do {
@@ -66,6 +62,7 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
                                     note.setBitmap(imagePath);
                                 } else {
                                     // Is a Google Drive or Dropbox image
+                                    note.setImagePath(imagePath);
                                 }
                             } else {
                                 note.setImagePath(AppConstant.NO_IMAGE);
@@ -75,17 +72,19 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
                         }
 
                     } else if (mType == BaseActivity.REMINDERS) {
-                        if (time.equals(AppConstant.NO_TIME)) {
+                        if (!time.equals(AppConstant.NO_TIME)) {
                             Note note = new Note(title, description, date, time, _id, imageSelection, type);
                             if (!imagePath.equals(AppConstant.NO_IMAGE)) {
                                 if (imageSelection == AppConstant.DEVICE_SELECTION) {
                                     note.setBitmap(imagePath);
                                 } else {
                                     // Is a Google Drive or Dropbox image
+                                    note.setImagePath(imagePath);
                                 }
                             } else {
                                 note.setImagePath(AppConstant.NO_IMAGE);
                             }
+
                             entries.add(note);
                         }
                     } else {
@@ -94,6 +93,7 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
                 } while (mCursor.moveToNext());
             }
         }
+
         return entries;
     }
 
@@ -115,6 +115,7 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
         }
     }
 
+    @Override
     protected void onStartLoading() {
         if (mNotes != null) {
             deliverResult(mNotes);
@@ -155,5 +156,3 @@ public class NotesLoader extends AsyncTaskLoader<List<Note>> {
         mCursor.close();
     }
 }
-
-

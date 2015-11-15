@@ -76,10 +76,10 @@
             android:configChanges="orientation|keyboard"
             android:launchMode="singleTask">
             <intent-filter>
-                <data android:scheme="TBA" />
-                <action android:name="android.intent.action.view" />
+                <data android:scheme="db-x9ttd52yi8nnppe" />
+                <action android:name="android.intent.action.VIEW" />
 
-                <category android:name="android.intent.category.browsable" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

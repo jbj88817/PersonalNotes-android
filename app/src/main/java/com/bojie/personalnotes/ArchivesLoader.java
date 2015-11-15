@@ -14,31 +14,27 @@ import java.util.List;
  * Created by bojiejiang on 6/13/15.
  */
 public class ArchivesLoader extends AsyncTaskLoader<List<Archive>> {
-
     private List<Archive> mArchives;
     private ContentResolver mContentResolver;
     private Cursor mCursor;
 
-    public ArchivesLoader(Context context, ContentResolver contentResolver) {
-        super(context);
-        mContentResolver = contentResolver;
+    public ArchivesLoader(Context ctx, ContentResolver cr) {
+        super(ctx);
+        this.mContentResolver = cr;
     }
 
     @Override
     public List<Archive> loadInBackground() {
         List<Archive> entries = new ArrayList<>();
-        String[] projection = {
-                BaseColumns._ID,
+        String[] projection = {BaseColumns._ID,
                 ArchivesContract.ArchivesColumns.ARCHIVES_TITLE,
                 ArchivesContract.ArchivesColumns.ARCHIVES_DESCRIPTION,
                 ArchivesContract.ArchivesColumns.ARCHIVES_DATE_TIME,
                 ArchivesContract.ArchivesColumns.ARCHIVES_CATEGORY,
-                ArchivesContract.ArchivesColumns.ARCHIVES_TYPE,
+                ArchivesContract.ArchivesColumns.ARCHIVES_TYPE
         };
-
         Uri uri = ArchivesContract.URI_TABLE;
-        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + "DESC");
-
+        mCursor = mContentResolver.query(uri, projection, null, null, BaseColumns._ID + " DESC");
         if (mCursor != null) {
             if (mCursor.moveToFirst()) {
                 do {
@@ -49,7 +45,9 @@ public class ArchivesLoader extends AsyncTaskLoader<List<Archive>> {
                     String type = mCursor.getString(mCursor.getColumnIndex(ArchivesContract.ArchivesColumns.ARCHIVES_TYPE));
                     int _id = mCursor.getInt(mCursor.getColumnIndex(BaseColumns._ID));
                     Archive archive = new Archive(title, description, dateTime, category, type, _id);
+
                     entries.add(archive);
+
                 } while (mCursor.moveToNext());
             }
         }
@@ -64,25 +62,19 @@ public class ArchivesLoader extends AsyncTaskLoader<List<Archive>> {
                 return;
             }
         }
-        List<Archive> oldNotes = mArchives;
+        List<Archive> oldArchives = mArchives;
         mArchives = archives;
-        if (isStarted()) {
+        if (isStarted())
             super.deliverResult(archives);
-        }
-        if (oldNotes != null && oldNotes != archives) {
-            releaseResources();
-        }
+        if (oldArchives != null && oldArchives != archives) releaseResources();
     }
 
+
+    @Override
     protected void onStartLoading() {
-        if (mArchives != null) {
-            deliverResult(mArchives);
-        }
-        if (takeContentChanged()) {
-            forceLoad();
-        } else if (mArchives == null) {
-            forceLoad();
-        }
+        if (mArchives != null) deliverResult(mArchives);
+        if (takeContentChanged()) forceLoad();
+        else if (mArchives == null) forceLoad();
     }
 
     @Override
@@ -100,8 +92,8 @@ public class ArchivesLoader extends AsyncTaskLoader<List<Archive>> {
     }
 
     @Override
-    public void onCanceled(List<Archive> archives) {
-        super.onCanceled(archives);
+    public void onCanceled(List<Archive> archive) {
+        super.onCanceled(archive);
         releaseResources();
     }
 
@@ -114,7 +106,3 @@ public class ArchivesLoader extends AsyncTaskLoader<List<Archive>> {
         mCursor.close();
     }
 }
-
-
-
-
